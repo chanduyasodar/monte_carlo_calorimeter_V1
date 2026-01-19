@@ -1,0 +1,417 @@
+\documentclass[11pt, a4paper]{article}
+
+% Essential Packages
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}        
+\usepackage{hyperref}        
+\usepackage{physics}     
+\usepackage{float}            
+
+% Geometry settings for better margins
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=2.5cm,
+    right=2.5cm
+}
+
+% Title Information
+\title{\textbf{Simplified Monte Carlo based HL-LHC Calorimeter with Multi-Event Validation}}
+\author{Project Report}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+ \url{https://github.com/chanduyasodar/monte_carlo_calorimeter_V1}   
+\end{center}
+
+
+
+\begin{abstract}
+This report details the Monte Carlo based simulation of a simplified calorimeter modeled as 100x100 grid. Gaussian, Poisson and Exponential distributions were incorporated into modeling the noise, pileup and signal shower components of energy deposition. Stochastic equations were used to describe the time deviation and energy correlations. Energy–time correlations and timing performance under High-Luminosity LHC (HL-LHC) pile-up conditions has been established. The study focuses on per-cell energy deposition, stochastic timing resolution, and the impact of pile-up on timing observables. A multi-event statistical analysis is performed to validate the mathematical consistency of the model prior to introducing trigger logic. We report the current results,critically assess their limitations, and outline corrections planned for the next version.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\newpage
+
+
+
+
+\section{Introduction}
+A calorimeter is a destructive detector used to measure the kinetic energy of the particles from the collision. As the particle enters the calorimeter, it interacts with the dense matter inside and initiates a shower. This shower is converted into recordable signal.
+
+In this project, the simulation is performed by modeling the calorimeter into a simple grid. The calorimeter detects two things, energy deposition and timing measurement. Each of these has 3 components noise, pileup and the actual signal which we are interested to record and study.
+
+In the hadron collider, protons collide in bunch, as a result, not all of them undergo a perfect head on, high energy collision. Most of the collisions observed are not very interesting, and these do release energy which is referred to as "Pileup". These disturb the data obtained. Noise is just electronic jitter. So, in order to not to let both of these interfere with the actual signal, time measurement is brought in, and we shall see how they are used in filtering the data effectively.
+
+\section{Theoretical Framework and Statistical Modeling}
+The Calorimeter is structured as a two dimensional grid of cells, each of them recording energy deposition and timing measurement for each event. Each event represents one proton-proton collision.
+
+\subsection{Energy Deposition and Measurement.}
+For each event, the energy of each cell$(i,j)$ of calorimeter is calculated by:
+
+\begin{equation}
+E^{total}_{ij}=E^{signal}_{ij}+E^{PU}_{ij}+E^{noise}_{ij}
+\end{equation}
+
+\subsubsection{Noise}
+Modeled via a \textbf{Gaussian Distribution}
+$$E^{\text{noise}} \sim \mathcal{N}(\mu,\sigma) \qquad \mu = 0,  \sigma \approx 0.5$$
+
+Noise arises from many, small independent fluctuations in voltage and current. According to the \textit{Central Limit Theorem}, the aggregate of these fluctuations follows a Gaussian distribution.
+
+
+\subsubsection{Pileup}
+ Pileup is the unwanted energy deposition due to low energy collisions
+\begin{itemize}
+    
+
+\item \textbf{Energy distribution}:. Modeled via \textbf{Uniform Distribution}, and is added to random cells in a loop repeating $N^{PU}$ times.
+
+$$E^{PU} \sim Uniform[0,5] \quad\ looping\ N^{PU}\ times$$.
+
+\item \textbf{Number of Interactions}:
+$n^{PU}$ is defined as the no.of interactions per bunch crossing, formulated by
+\begin{equation}
+ n^{PU}= \frac{L_{inst} \cdot \sigma_{inel}}{f_{rev} \cdot n_b}   
+\end{equation}
+
+
+Where:
+
+$L_{inst} = 5.0 \times 10^{34} \text{ cm}^{-2}\text{s}^{-1}$$\sim$ Instantaneous Luminosity (the "brightness" of the beam).
+
+$\sigma_{inel} \approx 80 \text{ mb} = 80 \times 10^{-27} \text{ cm}^2\sim$ 
+Inelastic proton-proton cross-section (the "target size" of a proton).
+
+$f_{rev}\sim$ Revolution frequency of the LHC
+
+$n_b\sim$ Number of bunches in the ring.
+
+$f_{rev} . n_b = 140 \text{ MHz}$\\
+
+
+Substituting all the values, we get $n^{PU}\approx 100$. Due to the bunches not being perfectly uniform, a fill factor is brought in the formula, increasing $n^{PU}\approx 140, 200$. Any of these values can be used.
+
+Every bunch crossing doesn't guarantee $n^{PU}\approx 140, 200$ collisions. So, the actual number of collisions,$N^{PU} $,is modeled via \textbf{Poisson Distribution} for each event.
+$$N^{PU}\sim Poisson(n^{PU})$$
+
+
+\end{itemize}
+
+\subsubsection{Signal}
+Single signal system is simulated in this project in order to avoid the complexity.
+\begin{itemize}
+    
+    \item \textbf{Event Occurrence}: A \textbf{Binomial Distribution} determines if a signal exists in the current frame
+    $$\mathcal{P}(Event) \sim Binomial(n=1,p=0.01)$$
+    \item \textbf{Signal Type}: A second \textbf{Binomial Trial} determines whether the signal is of the Electromagnetic or Hadronic shower
+    $$\mathcal{P}(Event_{EM})\sim Binomial(n=1,p=0.3)\quad else, Signal=Event_{Hd}$$
+    
+    \item \textbf{Energy Spectrum}:
+    \begin{itemize}
+        \item \textbf{Electromagnetic Jet}: Modeled via \textbf{Exponential Distribution}, ensuring low frequency of high energy signal
+        $$A^{signal}_{EM}\sim Expoential(Amplitude=30 GeV)$$ 
+        \item \textbf{Hadron Shower}: Modeled via \textbf{Gaussian Distribution} as a hadron jet consists of many hadrons and their combination of their energies results in energy measurement fluctuating around a central mean symmetrically.
+        $$A^{signal}_{Hd}\sim \mathcal{N}(\mu=50,\sigma=5)\quad \text{where, $\mu$=Amplitude=50 GeV}$$ 
+    \end{itemize}
+    
+    \item \textbf{Spatial Profile}: Random coordinate is chosen on the grid and a \textbf{2D-Gaussian packet} is applied around that coordinate.
+    $$Shape\sim e^{-d^2/2\sigma_{signal}}$$, where $\sigma_{EM}=3$  (narrow and compact)and $\sigma_{Hd}=9$(broad).
+    
+    \item \textbf{Signal Profile}: Signals observed in colliders are not perfect Gaussian shower. A realistic signal peak is modeled via \textbf{Poisson Distribution} of product of the Energy spectrum and shower shape
+    $$E^{signal}\sim Poisson(A^{signal}*Shape)$$
+
+\subsubsection{Threshold}
+\begin{equation}
+E_{min}=n*\sigma_{noise}    
+\end{equation}
+ where n is chosen such that the detector ignores noise energy and notices signal energy.
+
+
+$$E^{total}_{ij}=E^{signal}_{ij}+E^{PU}_{ij}+E^{noise}_{ij}$$
+\end{itemize}
+
+%===============================================================================
+
+\subsection{Timing Measurement}
+ The final cellular time is formulated as a sum of $t_0$ and  \textbf{Gaussian Distribution} of mean time and time resolution. Here,we assign $t_0\approx0$ implying that $t_{ij}$ of signal cells is 0. 
+\begin{equation}
+     t_{ij}= t_0+ \mathcal{N}(\mu^{t}_{ij},\sigma^{t}(E_{ij}))
+\end{equation}  
+   
+\subsubsection{Time Resolution}
+    Timing uncertainty is correlated to Energy by relation
+\begin{equation}
+\sigma^t_{ij}=\sqrt{\left(\frac{a}{\sqrt{E_{ij}+E_{min}}}\right)^2+b^2}
+\end{equation}
+    where a=75 ps (Stochastic Term) accounting for sampling fluctuation and b=25 ps (Constant term) accounting for electronic jitter. These values are chosen to reflect the target performance of the CMS High Granularity Calorimeter under HL-LHC conditions.$E_{min}$ was added to the stochastic term for computation purposes
+
+\subsubsection{Pileup Time}
+The window in which the $N^{PU}$ collisions occur is calculated by
+    $$\Delta t= \frac{\text{Lenght of Proton bunch}\approx 7.5\ to\ 10\ cm}{\text{Speed of light}}\approx 180\ to\ 200\ ps$$
+    Pileup time is modeled via \textbf{Gaussian Distribution} as per \textit{Central Limit Theorem} and the bunch shape, which is also Gaussian.
+    $$t^{PU}\sim \mathcal{N}(\mu =0,\sigma=\Delta t)\quad$$
+
+\subsubsection{Mean Time}
+We assign $t^{signal}\approx 0$ for high energy collisions.
+\begin{equation}
+\mu^{t}_{ij}=\frac{(E^{signal}_{ij}*t^{signal})+(E^{PU}_{ij}*t^{PU}_{ij})}{E^{total}_{ij}+E_{min}}   
+\end{equation}
+
+
+    $$t_{ij}= t_0+ \mathcal{N}(\mu^{t}_{ij},\sigma^{t}(E_{ij}))$$
+
+%=====================================================================
+
+
+\section{Signal Event Analysis}
+
+\begin{figure}[H]
+    \includegraphics[width=0.95\linewidth]{signal/signal.png}
+    \caption{Heat Map}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{Spatial Observation: Heat Maps}
+\begin{itemize}
+
+\subsubsection{Observation}
+
+\item \textbf{Electron Shower}: Heatmap displays a highly concentrated longitudinal energy profile. The lateral spread (Molière radius) is narrow and well-defined.
+
+This behavior closely matches experimental EM showers observed in ATLAS or CMS ECAL calorimeters, where electrons and photons produce narrow showers governed by the Molière radius. The compact spatial extent and sharp core are realistic.
+        
+\item \textbf{Hadron Shower}: Compared to the electromagnetic signal, this shower is significantly deeper and more diffuse. Energy deposition is spread across more layers and shows several "sub-clusters," representing the stochastic nature of hadronic interactions and nuclear fragmentation.
+
+This agrees well with experimental hadronic showers, which are wider due to nuclear interactions, invisible energy losses, and large event-by-event fluctuations.
+
+\end{itemize}
+
+\subsubsection{Limitations and Planned Model Upgrades}
+\begin{itemize}
+\item \textbf{Over-symmetric shower shapes $\longrightarrow$ Incident-angle and geometry modeling}:
+The near-radial symmetry of simulated showers will be addressed by introducing non-normal incidence angles and realistic detector granularity to reproduce shower elongation observed in real calorimeters.
+
+\item \textbf{Lack of longitudinal structure $\longrightarrow$ Multi-layer calorimeter simulation}:
+The absence of depth-dependent shower development will be resolved by extending the model to multiple longitudinal layers, allowing electromagnetic and hadronic showers to peak at different depths as in real detectors.
+
+\item \textbf{Simplified hadronic fluctuations $\longrightarrow$ Stochastic sub-shower modeling}:
+The overly smooth hadronic shower structure will be improved by incorporating stochastic secondary interactions and non-Gaussian energy fluctuations to generate realistic cell-to-cell variations and hot spots.
+
+\item \textbf{Uniform background distribution $\longrightarrow$ Correlated pile-up and detector non-uniformities}:
+The spatial uniformity of the background will be refined by modeling time- and space-correlated pile-up vertices and detector-specific noise variations.
+
+\item \textbf{Overly clean dynamic range separation $\longrightarrow$ Realistic thresholds and zero-suppression}:
+The clear separation between signal and background will be made more realistic by introducing readout thresholds, zero-suppression, and digitization effects that increase overlap between low-energy signal and background.
+\end{itemize}
+
+
+%---------------------------------------------------------------
+\subsection{Signal vs Background Energy Distribution}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{signal/em_hist.png}
+    
+\end{figure}
+
+%---------------------------------------------------------------
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{signal/hd_hist.png}
+    \caption{Signal vs Background Histogram}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsubsection{Oberservation}
+\begin{itemize}
+   
+\item \textbf{Electromagnetic Showers}:
+
+For electromagnetic showers, the background energy distribution is sharply peaked at low energies and decreases rapidly, consistent with expectations from electronic noise and low-energy pile-up. The signal distribution exhibits a steeply falling spectrum with a pronounced high-energy tail extending to approximately 40–45 GeV. At moderate and high energies, the signal dominates the background by several orders of magnitude.
+
+The separation between signal and background improves rapidly with increasing energy, indicating that energy-based selections are effective for electromagnetic objects at the cell level. The residual overlap at low energies is attributed to peripheral shower deposits and noise contributions, as commonly observed in experimental electromagnetic calorimeter data.
+
+\item \textbf{Hadronic Showers}:
+
+For hadronic showers, the signal energy distribution is broader and extends to higher energies than in the electromagnetic case, with a tail reaching beyond 50 GeV. The background distribution remains concentrated at low energies and is similar in shape to that observed in the electromagnetic case.
+
+Compared to electromagnetic showers, the separation between signal and background emerges at higher energies. The increased overlap at low and intermediate energies reflects the wider spatial extent and larger intrinsic fluctuations of hadronic showers, consistent with the stochastic nature of hadronic interactions in calorimeters.
+\end{itemize}
+\subsubsection{Comparison Between Electromagnetic and Hadronic Signals}
+
+The electromagnetic and hadronic signal distributions exhibit qualitatively different behaviors. Electromagnetic showers produce a narrower energy spectrum with a more rapid fall-off, while hadronic showers show a broader distribution and a longer high-energy tail. These differences are consistent with established calorimeter performance and demonstrate that the simulation reproduces the expected contrast between electromagnetic and hadronic energy deposition.
+
+\subsubsection{Discussion}
+
+The logarithmic representation highlights the rarity of large background fluctuations and the significant dynamic range over which signal dominates background. While energy alone provides strong discrimination for electromagnetic showers, the reduced separation observed for hadronic showers at low energies motivates the inclusion of additional observables, such as timing or shower topology, for improved background rejection.
+
+Overall, the observed energy distributions are in qualitative agreement with experimental calorimeter measurements and provide validation of the signal and background modeling used in this study.
+%======================================================================================
+\section{Noise Analysis}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{noise.png}
+    \caption{Caption}
+    \label{fig:placeholder}
+\end{figure}
+\begin{itemize}
+\item \textbf{Observation}:
+The noise energy distribution is symmetric about zero and well described by a single-peaked, bell-shaped curve extending approximately from $-2$ to $+2$ GeV, with the fitted Gaussian closely following the histogram across the full range.
+
+\item \textbf{Statistical interpretation}:
+The agreement between the histogram and the Gaussian fit indicates that the noise fluctuations are consistent with a normal distribution characterized by mean $\mu\approx 0$ and finite standard deviation, as expected from the superposition of many independent electronic noise sources under the \textit{Central Limit Theorem}.
+
+\item \textbf{Limitation}:
+The visual agreement alone does not quantify goodness-of-fit, and potential non-Gaussian tails or small biases in the mean cannot be excluded without formal statistical tests or higher-statistics samples.
+
+\item \textbf{Planned model upgrade}:
+Perform quantitative goodness-of-fit tests (e.g., $\chi^2$, Kolmogorov–Smirnov) and study noise stability across detector regions and event samples to assess deviations from Gaussian behavior and potential systematic effects.
+
+\end{itemize}
+%====================================================================================
+\section{Multi Event Observation and Analysis}
+The event generation loop was run for 300 times,whose data was recorded and the following graphs were plotted for model validation.
+\subsection{Energy Distribution}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{mutli event/energy_dist.png}
+    \caption{Energy Distribution Histogram}
+    \label{fig:placeholder}
+\end{figure}
+\begin{itemize}
+    \item \textbf{Observation}:
+The per-cell energy distribution is strongly right-skewed, with a pronounced low-energy peak and a long tail extending to high energies, and shows a smooth, monotonic decrease on a logarithmic probability scale.
+
+\item \textbf{Statistical interpretation}:
+The low-energy peak is consistent with noise-dominated and peripheral shower cells, while the heavy tail reflects rare, high-energy deposits from shower cores; the absence of secondary modes suggests a single dominant deposition mechanism.
+
+\item \textbf{Limitation}:
+The overlap between noise and low-energy signal is not explicitly separated, and no formal goodness-of-fit to an expected functional form (e.g., Gamma/Landau-like) is provided.
+
+\item \textbf{Planned model upgrade}:
+Decompose the distribution into noise-only and signal components and perform quantitative fits with statistical tests to assess agreement and overlap.
+\end{itemize}
+
+%---------------------------------------------------------------
+
+\subsection{Time Distribution}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{mutli event/time_dist.png}
+    \caption{Time Distribution Histogram}
+    \label{fig:placeholder}
+\end{figure}
+\begin{itemize}
+\item \textbf{Observation}:
+    The reconstructed time distribution is approximately Gaussian, centered near zero, with symmetric tails extending to several hundred picoseconds.
+
+\item \textbf{Statistical interpretation}:
+The symmetry and unimodality are consistent with Gaussian timing jitter, while the extended tails arise from contributions of low-energy cells with poor timing resolution.
+
+\item \textbf{Limitation}:
+Aggregating all energies inflates the overall RMS and obscures the intrinsic timing performance at higher energies.
+
+\item \textbf{Planned model upgrade}:
+Produce energy-sliced time distributions and report robust spread measures or truncated RMS values.
+\end{itemize}
+%---------------------------------------------------------------
+\subsection{Energy vs Time Scatter Plot}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{mutli event/energy_vs_time.png}
+        \caption{Energy vs Time Scatter Plot}
+        \label{fig:placeholder}
+    \end{figure}
+\begin{itemize}
+    \item \textbf{Observation}:
+A funnel-shaped distribution is observed, with large timing spread at low energies and a rapidly narrowing spread as energy increases, while the mean time remains centered near zero.
+
+\item \textbf{Statistical interpretation}:
+The decreasing variance with energy indicates heteroscedastic behavior consistent with an energy-dependent timing resolution, and the symmetry around zero suggests no systematic timing bias.
+
+\item \textbf{Limitation}:
+Low-energy points dominate the variance and include extreme outliers, indicating that timing information is statistically ill-defined below a certain energy threshold.
+
+\item \textbf{Planned model upgrade}:
+Apply minimum energy cuts and quantify timing variance in energy bins to isolate physically meaningful regimes.
+\end{itemize}
+
+%-----------------------------------------------------------
+
+\subsection{Time Resolution: Simulation vs Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{mutli event/t_sigma.png}
+    \caption{$\sigma^t:$ Simulation vs Theory}
+    \label{fig:placeholder}
+\end{figure}
+\begin{itemize}
+    \item \textbf{Observation}:
+    The simulated timing resolution decreases with increasing energy and approaches the design curve at moderate to high energies, while showing significant degradation at low energies.
+
+\item \textbf{Statistical interpretation}
+Agreement at high energies supports the asymptotic behavior of the timing model, whereas low-energy deviations indicate additional variance sources not captured by the nominal parameterization.
+
+\item \textbf{Limitation}:
+No quantitative fit quality is reported, and the design curve appears optimistic in the low-energy regime.
+
+\item \textbf{Planned model upgrade}:
+Fit the simulated points to extract effective model parameters and include additional low-energy noise terms or thresholds.
+\end{itemize}
+
+%---------------------------------------------------------------
+
+\subsection{Extracted Time Resolution vs Energy}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{mutli event/tsigma_vs_energy.png}
+    \caption{$\sigma^t$ vs Energy}
+    \label{fig:placeholder}
+\end{figure}
+\begin{itemize}
+    \item \textbf{Observation}:
+    The extracted $\sigma^t(E)$ decreases rapidly at low energies and flattens at higher energies, approaching a constant timing floor, with modest bin-to-bin fluctuations.
+
+\item \textbf{Statistical interpretation}:
+The trend is consistent with a stochastic term dominating at low energies and a constant term at high energies, while residual scatter suggests limited statistics or residual correlations.
+
+\item \textbf{Limitation}:
+Low-energy bins are unstable and dominate the dynamic range, and uncertainties on $\sigma^t(E)$ are not explicitly shown.
+
+\item \textbf{Planned model upgrade}:
+Increase statistics per bin, include uncertainty bands, and restrict extraction to energy regions where timing is well defined.
+\end{itemize}
+%---------------------------------------------------------------
+
+\section{Conclusion}
+This project presents a statistically grounded Monte Carlo framework for studying energy–time correlations in a segmented calorimeter, incorporating electromagnetic and hadronic showers, Gaussian electronic noise, pile-up, and energy-dependent timing resolution. The statistical analyses of energy spectra, timing distributions, and energy–time correlations demonstrate internal consistency and qualitative agreement with established calorimeter behavior, particularly in the trigger-relevant moderate-to-high energy regime. The noise model is validated through Gaussian fits, and the extracted timing resolution follows the expected functional dependence on energy, with deviations at low energies correctly identified as noise-dominated and statistically non-informative.\\ 
+
+Overall, the project achieves a decent validation of the core detector physics assumptions while transparently identifying limitations arising from controlled simplifications, establishing a reliable foundation for further development.
+
+\section{Future Scope}
+\begin{itemize}
+    
+
+\item Implement FPGA-friendly algorithms using fixed-point arithmetic, pipelined processing, and latency-aware designs suitable for real-time trigger applications.
+
+\item Develop local-maxima–based and sliding-window clustering algorithms for robust signal identification in high-pile-up environments.
+
+\item Design and integrate a full trigger mechanism incorporating energy- and timing-based selections, pile-up suppression, and real-time decision logic.
+
+\item Extend the detector model to include longitudinal segmentation, non-uniform and correlated noise, pile-up vertex structure, calibration uncertainties, and digitization effects.
+
+\item Incorporate advanced AI/ML techniques for pattern recognition, anomaly detection, and adaptive thresholding, and benchmark their performance against classical trigger algorithms.
+
+\item Evolve the framework into a realistic prototype for next-generation calorimeter trigger studies relevant to the HL-LHC.
+\end{itemize}
+\end{document}
